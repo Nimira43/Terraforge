@@ -1,0 +1,104 @@
+import * as THREE from 'three'
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js'
+import { SUBTRACTION, Evaluator, Brush } from 'three-bvh-csg'
+import GUI from 'lil-gui'
+
+const gui = new GUI({ width: 325 })
+const debugObject = {}
+
+const canvas = document.querySelector('canvas.webgl')
+const scene = new THREE.Scene()
+
+const rgbeLoader = new RGBELoader()
+rgbeLoader.load('/spruit_sunrise.hdr', (environmentMap) => {
+  environmentMap.mapping = THREE.EquirectangularReflectionMapping
+
+  scene.background = environmentMap
+  scene.backgroundBlurriness = 0.5
+  scene.environment = environmentMap
+})
+
+const placeholder = new THREE.Mesh(
+  new THREE.IcosahedronGeometry(2, 5),
+  new THREE.MeshPhysicalMaterial()
+)
+scene.add(placeholder)
+
+const boardFill = new Brush(new THREE.BoxGeometry(11, 2, 11))
+const boardHole = new Brush(new THREE.BoxGeometry(10, 2.1, 10))
+
+boardFill.material.color.set('#ff4500')
+boardHole.material = new THREE.MeshPhongMaterial()
+
+const evaluator = new Evaluator()
+const board = evaluator.evaluate(
+  boardFill,
+  boardHole,
+  SUBTRACTION
+)
+scene.add(board)
+
+const directionalLight = new THREE.DirectionalLight('#ffffff', 2)
+directionalLight.position.set(6.25, 3, 4)
+directionalLight.castShadow = true
+directionalLight.shadow.mapSize.set(1024, 1024)
+directionalLight.shadow.camera.near = 0.1
+directionalLight.shadow.camera.far = 30
+directionalLight.shadow.camera.top = 8
+directionalLight.shadow.camera.right = 8
+directionalLight.shadow.camera.bottom = -8
+directionalLight.shadow.camera.left = -8
+scene.add(directionalLight)
+
+const sizes = {
+  width: window.innerWidth,
+  height: window.innerHeight,
+  pixelRatio: Math.min(window.devicePixelRatio, 2)
+}
+
+window.addEventListener('resize', () => {
+  sizes.width = window.innerWidth
+  sizes.height = window.innerHeight
+  sizes.pixelRatio = Math.min(window.devicePixelRatio, 2)
+
+  camera.aspect = sizes.width / sizes.height
+  camera.updateProjectionMatrix()
+  renderer.setSize(sizes.width, sizes.height)
+  renderer.setPixelRatio(sizes.pixelRatio)
+})
+
+const camera = new THREE.PerspectiveCamera(
+  35,
+  sizes.width / sizes.height,
+  0.1,
+  100
+)
+camera.position.set(-10, 6, -2)
+scene.add(camera)
+
+const controls = new OrbitControls(camera, canvas)
+controls.enableDamping = true
+
+const renderer = new THREE.WebGLRenderer({
+  canvas: canvas,
+  antialias: true
+})
+
+renderer.shadowMap.enabled = true
+renderer.shadowMap.type = THREE.PCFSoftShadowMap
+renderer.toneMapping = THREE.ACESFilmicToneMapping
+renderer.toneMappingExposure = 1
+renderer.setSize(sizes.width, sizes.height)
+renderer.setPixelRatio(sizes.pixelRatio)
+
+const clock = new THREE.Clock()
+
+const tick = () => {
+  const elapsedTime = clock.getElapsedTime()
+  controls.update()
+  renderer.render(scene, camera)
+  window.requestAnimationFrame(tick)
+}
+
+tick()

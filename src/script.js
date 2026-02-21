@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js'
 import { SUBTRACTION, Evaluator, Brush } from 'three-bvh-csg'
+import CustomShaderMaterial from 'three-custom-shader-material/vanilla'
 import GUI from 'lil-gui'
 
 const gui = new GUI({ width: 325 })
@@ -19,17 +20,24 @@ rgbeLoader.load('/spruit_sunrise.hdr', (environmentMap) => {
   scene.environment = environmentMap
 })
 
-const placeholder = new THREE.Mesh(
-  new THREE.IcosahedronGeometry(2, 5),
-  new THREE.MeshPhysicalMaterial()
-)
-scene.add(placeholder)
+const geometry = new THREE.PlaneGeometry(10, 10, 500, 500)
+geometry.rotateX(- Math.PI * 0.5)
+
+const material = new CustomShaderMaterial({
+  baseMaterial: THREE.MeshStandardMaterial,
+  silent: true,
+  metalness: 0,
+  roughness: 0.5,
+  color: '#85d534'
+})
+
+const terrain = new THREE.Mesh(geometry, material)
+terrain.receiveShadow = true
+terrain.castShadow = true
+scene.add(terrain)
 
 const boardFill = new Brush(new THREE.BoxGeometry(11, 2, 11))
 const boardHole = new Brush(new THREE.BoxGeometry(10, 2.1, 10))
-
-boardFill.material.color.set('#ff4500')
-boardHole.material = new THREE.MeshPhongMaterial()
 
 const evaluator = new Evaluator()
 const board = evaluator.evaluate(
@@ -37,6 +45,14 @@ const board = evaluator.evaluate(
   boardHole,
   SUBTRACTION
 )
+board.geometry.clearGroups()
+board.material = new THREE.MeshStandardMaterial({
+  color: '#ff4500',
+  metalness: 0,
+  roughness: 0.3
+})
+board.castShadow = true
+board.receiveShadow = true
 scene.add(board)
 
 const directionalLight = new THREE.DirectionalLight('#ffffff', 2)

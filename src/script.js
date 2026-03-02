@@ -4,6 +4,8 @@ import { RGBELoader } from 'three/addons/loaders/RGBELoader.js'
 import { SUBTRACTION, Evaluator, Brush } from 'three-bvh-csg'
 import CustomShaderMaterial from 'three-custom-shader-material/vanilla'
 import GUI from 'lil-gui'
+import terrainVertexShader from './shaders/terrain/vertex.glsl'
+import terrainFragmentShader from './shaders/terrain/fragment.glsl'
 
 const gui = new GUI({ width: 325 })
 const debugObject = {}
@@ -21,14 +23,18 @@ rgbeLoader.load('/spruit_sunrise.hdr', (environmentMap) => {
 })
 
 const geometry = new THREE.PlaneGeometry(10, 10, 500, 500)
+geometry.deleteAttribute('uv')
+geometry.deleteAttribute('normal')
 geometry.rotateX(- Math.PI * 0.5)
 
 const material = new CustomShaderMaterial({
   baseMaterial: THREE.MeshStandardMaterial,
+  vertexShader: terrainVertexShader,
+  fragmentShader: terrainFragmentShader,
   silent: true,
   metalness: 0,
   roughness: 0.5,
-  color: '#85d534'
+  color: '#448206'
 })
 
 const terrain = new THREE.Mesh(geometry, material)
